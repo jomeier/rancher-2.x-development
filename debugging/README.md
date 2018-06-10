@@ -7,6 +7,16 @@ Also I had the problem that after the first successful connection to delve, it w
 
 But this process here should work rather good. Give me feedback, if you find errors or have improvement tips for me, please.
 
+## Content
+1 [Prerequisites](#prerequisites)<br>
+2 [Install my scripts to the rancher root folder](#install-my-scripts-to-the-rancher-folder)<br>
+3 [Install GOLAND IDE](#install-goland-ide)<br>
+4 [Create build settings and build with GOLAND](#create-build-settings-and-build-rancher-with-goland)<br>
+5 [Create debug container](#create-debug-container)<br>
+6 [Configure GOLAND for remote debugging](#configure-goland-for-remote-debugging)<br>
+7 [Remote debug Rancher 2.x](#remote-debug-rancher-2.x-in-goland)<br>
+8 [Watch stdout output of Rancher 2.x](#watch-stdout-output-of-rancher-2.x)<br>
+9 [Optional: Make new docker debug image](#optional:-make-a-new-docker-debug-image)
 
 ## Prerequisites
 * Virtual machine with Ubuntu 18.04 desktop
@@ -136,7 +146,7 @@ I provide a few Dockerfiles and scripts which must be brought in place before yo
 
 
 
-## Install _GOLAND_ debugger
+## Install _GOLAND_ IDE
 
 ### Why not using Visual Studio Code?
 At first I tried to set up a build environment with _Visual Studio Code_. I was able to compile and debug but for some reason (the _GO_ plugin of VSCode maybe?) the debugging experience was not good. _Rancher_ is a rather big go project and I often had problems with _VSCode_ getting very slow.
@@ -221,7 +231,7 @@ If you want to see the log messages of rancher, you must call:
 docker logs debugger
 ```
 
-## Make a new Docker debug image
+## Optional: Make a new Docker debug image
 * Make your changes
 * Build a new version of the docker debug image:
 
