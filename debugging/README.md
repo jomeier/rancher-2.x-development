@@ -7,6 +7,13 @@ Also I had the problem that after the first successful connection to delve, it w
 
 But this process here should work rather good. Give me feedback, if you find errors or have improvement tips for me, please.
 
+
+## Overview
+
+We will start rancher as container at the start of each debug session and
+volume binds a debug binary (_debug_) to masquerade as rancher. We will also inject
+the debugger _delve_ which will be use to start rancher and we will be able to remote controls it.
+
 ## Content
 1 [Prerequisites](#prerequisites)<br>
 2 [Install my scripts to the rancher root folder](#install-my-scripts-to-the-rancher-folder)<br>
@@ -22,13 +29,13 @@ But this process here should work rather good. Give me feedback, if you find err
 * Virtual machine with Ubuntu 18.04 desktop
     * Virtualbox
     * as much as CPU cores and RAM you can spend for it (I love my AMD Ryzen system for that)
-    * Harddisk 40 GByte 
+    * Harddisk 40 GByte
     * Network Interface set to bridged mode
     * Ubuntu-18.04-desktop-amd64 ISO image
-* Docker 
+* Docker
   * At the time of this writing Docker is not available as stable for Ubuntu 18.04
   * Install docker from the Ubuntu repository instead:
-    
+
       ```bash
     sudo apt-get update
     sudo apt-get install docker.io
@@ -43,7 +50,7 @@ But this process here should work rather good. Give me feedback, if you find err
 
     Logout / Login afterwards
   * Test docker:
-    
+
       ```bash
       docker images
       ```
@@ -70,7 +77,7 @@ But this process here should work rather good. Give me feedback, if you find err
       export GOPATH=/go
       export GOBIN=/go/bin
       ```
-     
+
       Reason for not setting _GOPATH_ to your home directory: <br>
       Later we will debug your Rancher binary in a docker container. The _GOPATH_ in the docker container and the _GOPATH_ of the environment outside of it should be the same to get the debugger working.
   * Create directories /go and /go/bin:
@@ -130,10 +137,18 @@ But this process here should work rather good. Give me feedback, if you find err
 
       This will take a few minutes.
 
-## Install my scripts to the rancher folder
-I provide a few Dockerfiles and scripts which must be brought in place before you can start debugging rancher 2.x. I'll try to get them in the official Git repository but until that happens...
+      Then package the docker image, we will use the base image to build the debug image on top.
 
-* copy the folder _package_ from this Git directory here to 
+      ```bash
+      ./scripts/package
+      ```
+
+
+
+## Install the scripts to the rancher folder
+I provide a few scripts which must be brought in place before you can start debugging rancher 2.x. I'll try to get them in the official Git repository but until that happens...
+
+* copy the folder _package_ from this Git directory here to
 
     ```bash
     $GOPATH/src/github.com/rancher/rancher
@@ -144,6 +159,21 @@ I provide a few Dockerfiles and scripts which must be brought in place before yo
     $GOPATH/src/github.com/rancher/rancher
     ```
 
+## Build a debug version of rancher
+
+This is required in order to have an executable that can be debugged. This is the executable that
+will replace the official rancher executable and that we will start in the container in place of
+rancher
+
+```bash
+make build-debug
+```
+or
+```bash
+./scripts/build-debug
+```
+
+This will create the `bin/debug` executable
 
 
 ## Install _GOLAND_ IDE
@@ -172,31 +202,19 @@ I switched to the [_Goland_](https://www.jetbrains.com/go/) development environm
   * Name: **Auto compile on Save**
   * Files to Watch -> Filetype: **Go**
   * Files to Watch -> Scope: **All places**
-  * Tool to Run on Changes -> Program: **go**
-  * Tool to Run on Changes -> Arguments: **build -gcflags "all=-N -l" -tags k8s -o debug**
-  * Tool to Run on Changes -> Output paths to refresh: 
-  * Tool to Run on Changes -> Working directory: **/go/src/github.com/rancher/rancher**
-  * Tool to Run on Changes -> Environment variables: <empty>
+  * Tool to Run on Changes -> Program: **$ProjectFileDir$/scripts/build-debug**
+  * Tool to Run on Changes -> Arguments: `<empty>`
+  * Tool to Run on Changes -> Output paths to refresh: `<empty>`
+  * Tool to Run on Changes -> Working directory: **$ProjectFileDir**
+  * Tool to Run on Changes -> Environment variables: `<empty>`
   * Keep all other settings on their defaults and press **OK** button.
 * Press **OK** button in File -> Settings dialog.
-* Open the file **main.go** in the root folder of **$GOPATH/src/github.com/rancher/rancher** and modify it a little bit (enter a space somewhere) and save the file.<br>You should see Goland starting the **Auto compile on Save** task because the files has changed. After a while the compilation ends and there should be the binary 
+* Open the file **main.go** in the root folder of **$GOPATH/src/github.com/rancher/rancher** and modify it a little bit (enter a space somewhere) and save the file.
+  You should see Goland starting the **Auto compile on Save** task because the files has changed. After a while the compilation ends and there should be the binary
 
     ```bash
     $GOPATH/src/github.com/rancher/rancher/debug
     ```
-
-## Create debug container 
-
-* Create debug container:
-
-    ```bash
-    cd $GOPATH/src/github.com/rancher/rancher
-    ./scripts/package-debugger.sh
-    ```
-
-    The result is a docker image named _rancher/rancher:debug_
-
-    GOLAND will create a container from this image at the start of each debug session and volume binds the binary _debug_ we created earlier into this container. Then the debugger _delve_ will be started and _GOLAND_ remote controls it.
 
 ## Configure _GOLAND_ for remote debugging
 
@@ -207,8 +225,8 @@ Perform this steps to create a debug configuration in _GOLAND_:
     * Host: **<IP Address of your Debug Container, in my case 172.17.0.1>**
     * Before launch: Activate tool windows: Press + button (Add) -> Run External tool -> Press + (Add)
         * Tool Settings -> Name: **Start debug container**
-        * Tool Settings -> Program: **/go/src/github.com/rancher/rancher/scripts/start-debug-container.sh**
-        * Tool Settings -> Working directory: **/go/src/github.com/rancher/rancher/scripts**
+        * Tool Settings -> Program: **$ProjectFileDir$/scripts/start-debug-container.sh**
+        * Tool Settings -> Working directory: **$ProjectFileDir**
         * Press **OK** button
     * External Tools: Press **OK** button
 * Run/Debug Configurations: Press **OK** button
@@ -224,19 +242,9 @@ Perform this steps to create a debug configuration in _GOLAND_:
 * If you change code, save the file and in the background the compilation task will automatically start, creating a new version of the binary **_debug_**
 * Restart the debugger and the new binary will be debugged.
 
-## Watch stdout output of rancher 2.x 
+## Watch stdout output of rancher 2.x
 If you want to see the log messages of rancher, you must call:
 
 ```bash
 docker logs debugger
 ```
-
-## Optional: Make a new Docker debug image
-* Make your changes
-* Build a new version of the docker debug image:
-
-    ```bash
-    ./scripts/package-debugger.sh
-    ```
-
-
