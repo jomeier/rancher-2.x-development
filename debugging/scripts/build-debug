@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e
+
+source $(dirname $0)/version
+
+cd $(dirname $0)/..
+
+mkdir -p bin
+
+RKE_VERSION=$(grep '^github.com/rancher/rke' vendor.conf | awk '{print $2}')
+
+go build -tags k8s -ldflags "-X main.VERSION=$VERSION -X github.com/rancher/rancher/pkg/settings.RKEVersion=$RKE_VERSION" -gcflags "all=-N -l" -o bin/debug
